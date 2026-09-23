@@ -11,13 +11,13 @@ namespace Atividade_SAEP_3.Models
         public int Id { get; set; }
         public int pacienteId { get; set; }
         public int medicoId { get; set; }
-        public DateTime DataHora { get; set; } // antes que tu altere, deixe o nome assim. (não se esqueça de apagar esse comentario antes de enviar essa atividade pelo amor de Deus)
+        public DateTime DataHora { get; set; }
         public string statusAtendimento { get; set; }
 
         [ForeignKey("pacienteId")]
-        public Paciente paciente { get; set; }
+        public Paciente? paciente { get; set; }
         
         [ForeignKey("medicoId")]
-        public Medico medico { get; set; }
+        public Medico? medico { get; set; }
     }
 }
