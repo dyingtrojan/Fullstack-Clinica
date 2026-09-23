@@ -6,9 +6,11 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using Atividade_SAEP_3.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Atividade_SAEP_3.Controllers
 {
+    [Authorize]
     public class ConsultasController : Controller
     {
         private readonly AppDbContext _context;
@@ -62,6 +64,7 @@ namespace Atividade_SAEP_3.Controllers
         {
             if (ModelState.IsValid)
             {
+                consulta.statusAtendimento = "Agendada";
                 _context.Add(consulta);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
