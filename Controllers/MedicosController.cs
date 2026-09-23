@@ -138,13 +138,20 @@ namespace Atividade_SAEP_3.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var medico = await _context.Medico.FindAsync(id);
-            if (medico != null)
+            var temConsulta = await _context.Consulta.AnyAsync(c => c.medicoId == id);
+            if (temConsulta)
             {
-                _context.Medico.Remove(medico);
+                ModelState.AddModelError("", "Não é possível excluir este médico pois ele possui consultas registradas.");
+                var medico = await _context.Medico.FindAsync(id);
+                return View(medico);
             }
 
-            await _context.SaveChangesAsync();
+            var medicoParaExcluir = await _context.Medico.FindAsync(id);
+            if (medicoParaExcluir != null)
+            {
+                _context.Medico.Remove(medicoParaExcluir);
+                await _context.SaveChangesAsync();
+            }
             return RedirectToAction(nameof(Index));
         }
 

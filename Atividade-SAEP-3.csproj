@@ -1,10 +1,11 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Atividade_SAEP_3</RootNamespace>
+    <UserSecretsId>d5b5930c-2b81-445a-bf93-d19082e15d6b</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

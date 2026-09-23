@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using Atividade_SAEP_3.Models;
 using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace Atividade_SAEP_3.Controllers
 {
@@ -23,8 +24,14 @@ namespace Atividade_SAEP_3.Controllers
         // GET: Consultas
         public async Task<IActionResult> Index()
         {
-            var appDbContext = _context.Consulta.Include(c => c.medico).Include(c => c.paciente);
-            return View(await appDbContext.ToListAsync());
+            var pacienteId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+
+            var consultas = _context.Consulta
+                .Include(c => c.medico)
+                .Include(c => c.paciente)
+                .Where(c => c.pacienteId == pacienteId);
+
+            return View(await consultas.ToListAsync());
         }
 
         // GET: Consultas/Details/5
@@ -62,15 +69,22 @@ namespace Atividade_SAEP_3.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("Id,pacienteId,medicoId,DataHora,statusAtendimento")] Consulta consulta)
         {
-            if (ModelState.IsValid)
+            consulta.pacienteId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            consulta.statusAtendimento = "Agendado";
+            ModelState.Remove("pacienteId");
+            ModelState.Remove("pacienteId");
+            ModelState.Remove("statusAtendimento");
+            ModelState.Remove("paciente");
+            ModelState.Remove("medico");
+            var jaTemConsultaHoje = await _context.Consulta.AnyAsync(c =>
+            c.pacienteId == consulta.pacienteId &&
+            c.DataHora.Date == consulta.DataHora.Date);
+
+            if (jaTemConsultaHoje)
             {
-                consulta.statusAtendimento = "Agendada";
-                _context.Add(consulta);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+                ModelState.AddModelError("", "Você já possui uma consulta agendada para este dia.");
+                ViewData["medicoId"] = new SelectList(_context.Medico, "Id", "Id", consulta.medicoId);
             }
-            ViewData["medicoId"] = new SelectList(_context.Medico, "Id", "Id", consulta.medicoId);
-            ViewData["pacienteId"] = new SelectList(_context.Paciente, "Id", "Id", consulta.pacienteId);
             return View(consulta);
         }
 
@@ -97,36 +111,42 @@ namespace Atividade_SAEP_3.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,pacienteId,medicoId,DataHora,statusAtendimento")] Consulta consulta)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,pacienteId,medicoId,DataHora,statusAtendimento")] Consulta consultaForm)
         {
-            if (id != consulta.Id)
+            if (id != consultaForm.Id)
             {
                 return NotFound();
             }
 
-            if (ModelState.IsValid)
+            var consulta = await _context.Consulta.FindAsync(id);
+            if (consulta == null)
             {
-                try
-                {
-                    _context.Update(consulta);
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!ConsultaExists(consulta.Id))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
-                return RedirectToAction(nameof(Index));
+                return NotFound();
             }
-            ViewData["medicoId"] = new SelectList(_context.Medico, "Id", "Id", consulta.medicoId);
-            ViewData["pacienteId"] = new SelectList(_context.Paciente, "Id", "Id", consulta.pacienteId);
-            return View(consulta);
+
+            // segurança extra: só o dono da consulta pode editar
+            var pacienteId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            if (consulta.pacienteId != pacienteId)
+            {
+                return Forbid();
+            }
+
+            consulta.DataHora = consultaForm.DataHora;
+            consulta.statusAtendimento = consultaForm.statusAtendimento;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!ConsultaExists(consulta.Id))
+                {
+                    return NotFound();
+                }
+                throw;
+            }
+            return RedirectToAction(nameof(Index));
         }
 
         // GET: Consultas/Delete/5
